@@ -15,7 +15,7 @@
 
 \maketitle
 
-\section{Introduction}
+\section*{Introduction}
 In this assignment, I was tasked with solving two polynomial regression problems based on an expansion project for a geothermal power plant:
 \begin{itemize}
     \item \textbf{Phase 1 (Steam Turbine Optimization - var1):} Predicting the Net Power Score ($y$) from 6 turbine control settings ($x_1$ to $x_6$), representing percentage deviations in valve adjustments, coolant flow, pump pressure, and blade pitch.
@@ -24,16 +24,16 @@ In this assignment, I was tasked with solving two polynomial regression problems
 
 My goal for both problems was to find the right polynomial degree and regularization method so that the models capture the underlying physical curves without underfitting or overfitting. I evaluated every model using 5-fold cross-validation on the training set, comparing Mean Squared Error (MSE) and $R^2$ scores.
 
-\section{Phase 1: Steam Turbine Optimization (var1)}
+\section*{Phase 1: Steam Turbine Optimization (var1)}
 
-\subsection{Data Exploration and Baseline}
+\subsection*{Data Exploration and Baseline}
 I started by inspecting the dataset files \texttt{BT2024032\_train\_var1.csv} and \texttt{BT2024032\_test\_var1.csv}. Both have 1,000 samples with no missing values. The six input features are bounded in $[-1.0, 1.0]$. The target variable $y$ has a mean of $0.74$, a standard deviation of $3.13$, and ranges between $-8.83$ and $+11.50$. 
 
 When I checked the linear correlation between individual inputs and $y$, the numbers were quite low (the strongest was around $-0.26$ with $x_5$). This showed that a simple linear equation would not work well because turbine efficiency depends on joint interactions between valves and pressures.
 
 To confirm this, I trained a baseline linear regression model (Degree 1). Using 5-fold cross-validation, it gave a validation MSE of $8.5302$ and an $R^2$ of only $0.1248$. Capturing only 12.5\% of the variance showed clear underfitting (high bias).
 
-\subsection{Testing Different Degrees and Regularization}
+\subsection*{Testing Different Degrees and Regularization}
 Next, I generated polynomial features from degree 1 up to degree 6. With 6 variables, the number of terms grows quickly: degree 2 has 27 terms, degree 3 has 83 terms, degree 4 has 209 terms, degree 5 has 461 terms, and degree 6 has 923 terms.
 
 I tested standard Ordinary Least Squares (OLS) alongside Ridge (L2 penalty) and Lasso (L1 penalty) using 5-fold cross-validation. Table~\ref{tab:var1} summarizes the results.
@@ -58,7 +58,7 @@ Degree & Features & OLS Val MSE & OLS Val $R^2$ & Ridge Val MSE & Lasso Val MSE 
 \end{tabular}
 \end{table}
 
-\subsection{Why I Chose Degree 5 with Lasso}
+\subsection*{Why I Chose Degree 5 with Lasso}
 Looking at Table~\ref{tab:var1} and Figure~\ref{fig:var1_curve}:
 \begin{itemize}
     \item Standard OLS works fine up to degree 4, but starts overfitting heavily at degree 5. The validation MSE jumps from $0.752$ to $1.284$, and at degree 6 it shoots up to $3.810$. Because each fold has only 800 training samples, estimating 461 to 923 unconstrained parameters leads to high variance.
@@ -89,14 +89,14 @@ Looking at Table~\ref{tab:var1} and Figure~\ref{fig:var1_curve}:
 In Figure~\ref{fig:var1_res}, the predicted vs. actual power scores lie tightly on the 1:1 diagonal. The residuals have a mean of $0.003$ (virtually zero bias) and a standard deviation of $0.56$, matching the expected random sensor noise.
 
 
-\section{Phase 2: Subterranean Thermal Reservoir Mapping (var2)}
+\section*{Phase 2: Subterranean Thermal Reservoir Mapping (var2)}
 
-\subsection{Data Exploration and Baseline}
+\subsection*{Data Exploration and Baseline}
 For Phase 2, the inputs are 3 spatial coordinate offsets in meters ($x_1$ = East-West, $x_2$ = North-South, $x_3$ = Depth). The target $y$ is the Thermal Anomaly Score. All coordinate values in train and test are within $[-1.0, 1.0]$. The target variable has a mean of $2.38$, a standard deviation of $7.22$, and ranges from $-30.10$ to $+39.87$.
 
 I noticed that $x_2$ had a moderate linear correlation of $0.50$ with $y$, while $x_1$ and $x_3$ had almost zero linear correlation. The baseline linear model (Degree 1) had a validation MSE of $38.88$ and an $R^2$ of only $0.243$, which is severe underfitting. Underground thermal plumes curve sharply in 3D space, so a much higher degree polynomial is required.
 
-\subsection{Degree Exploration from 1 to 16}
+\subsection*{Degree Exploration from 1 to 16}
 Because there are only 3 variables, the number of polynomial terms grows more slowly than in Phase 1 ($\binom{d+3}{3}$ terms). This allowed me to test degrees from 1 up to 16 using 5-fold cross-validation. Table~\ref{tab:var2} shows how the models behaved.
 
 \begin{table}[htbp]
@@ -123,7 +123,7 @@ Degree & Features & OLS Val MSE & OLS Val $R^2$ & Ridge Val MSE & Ridge Val $R^2
 \end{tabular}
 \end{table}
 
-\subsection{Why I Chose Degree 12 with Ridge}
+\subsection*{Why I Chose Degree 12 with Ridge}
 Looking at Table~\ref{tab:var2} and Figure~\ref{fig:var2_curve}:
 \begin{itemize}
     \item Unregularized OLS reaches its minimum error at Degree 8 (MSE = $0.2788$), but begins overfitting at degree 9 (MSE = $0.2939$) and degree 10 (MSE = $0.3428$).
@@ -159,7 +159,7 @@ I also checked the predictions for any physical inconsistencies:
 \end{itemize}
 
 
-\section{Discussion on Bias, Variance, and Regularization}
+\section*{Discussion on Bias, Variance, and Regularization}
 Across both problems, finding the right model came down to balancing bias and variance:
 \begin{itemize}
     \item \textbf{High Bias (Underfitting):} Models with degree 1 to 3 were too simple. They couldn't bend enough to follow the actual physical behavior, leaving large errors and low $R^2$ scores in both phases.
@@ -169,7 +169,7 @@ Across both problems, finding the right model came down to balancing bias and va
     In Phase 2, Ridge (L2) was more suitable because heat diffusion through rock forms continuous, smooth gradients. L2 regularization shrank all 454 coefficients smoothly, keeping the 3D surface stable right up to degree 12.
 \end{itemize}
 
-\section{Summary of Results}
+\section*{Summary of Results}
 Table~\ref{tab:summary} shows the final configuration and performance of both models used to generate the test predictions.
 
 \begin{table}[htbp]
@@ -188,7 +188,7 @@ Phase 2 (\texttt{var2}) & 12 & Ridge ($\alpha \approx 1.76$)  & 454 / 454 & \tex
 \end{tabular}
 \end{table}
 
-\section{Conclusion}
+\section*{Conclusion}
 By carefully testing polynomial degrees and applying the right regularization techniques, I was able to build reliable models for both phases of the project:
 \begin{itemize}
     \item For the steam turbine facility (Phase 1), the Degree 5 Lasso model accurately captures non-linear valve interactions while discarding noisy terms, predicting the Net Power Score with $96.7\%$ accuracy.

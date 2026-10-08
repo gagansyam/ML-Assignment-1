@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import KFold, cross_validate
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold, cross_validate, cross_val_predict
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-from sklearn.linear_model import LinearRegression, RidgeCV, LassoCV
+from sklearn.linear_model import RidgeCV, LassoCV
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Load data
 train_df = pd.read_csv('BT2024032/BT2024032_train_var1.csv')
 test_df = pd.read_csv('BT2024032/BT2024032_test_var1.csv')
 
@@ -14,26 +14,33 @@ X = train_df[features].values
 y = train_df['y'].values
 X_test = test_df[features].values
 
-# 5-fold CV setup
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-print("Comparing polynomial degrees on var1:")
-for deg in [1, 2, 3, 4, 5]:
+degrees = [1, 2, 3, 4, 5, 6]
+ridge_mses = []
+lasso_mses = []
+
+print("Evaluating polynomial degrees for var1:")
+for deg in degrees:
     poly = PolynomialFeatures(degree=deg, include_bias=False)
     X_poly = poly.fit_transform(X)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_poly)
-    
-    # Check Ridge
-    ridge = RidgeCV(alphas=np.logspace(-3, 2, 20), cv=kf)
-    cv_res = cross_validate(ridge, X_scaled, y, cv=kf, scoring={'mse': 'neg_mean_squared_error', 'r2': 'r2'})
-    
-    val_mse = -cv_res['test_mse'].mean()
-    val_r2 = cv_res['test_r2'].mean()
-    print(f"Degree {deg}: {X_poly.shape[1]} features | Ridge Val MSE = {val_mse:.4f}, Val R2 = {val_r2:.4f}")
 
-# Train final selected model: Degree 5 with Lasso
-print("\nTraining final Degree 5 model with Lasso...")
+    ridge = RidgeCV(alphas=np.logspace(-3, 2, 20), cv=kf)
+    cv_ridge = cross_validate(ridge, X_scaled, y, cv=kf, scoring={'mse': 'neg_mean_squared_error', 'r2': 'r2'})
+    r_mse = -cv_ridge['test_mse'].mean()
+    r_r2 = cv_ridge['test_r2'].mean()
+    ridge_mses.append(r_mse)
+
+    if deg <= 6:
+        lasso = LassoCV(alphas=np.logspace(-3, 1, 25), cv=kf, max_iter=10000, random_state=42)
+        cv_lasso = cross_validate(lasso, X_scaled, y, cv=kf, scoring={'mse': 'neg_mean_squared_error', 'r2': 'r2'})
+        l_mse = -cv_lasso['test_mse'].mean()
+        l_r2 = cv_lasso['test_r2'].mean()
+        lasso_mses.append(l_mse)
+        print(f"Degree {deg:2d} ({X_poly.shape[1]:3d} feats) -> Ridge MSE: {r_mse:.4f} (R2: {r_r2:.4f}) | Lasso MSE: {l_mse:.4f} (R2: {l_r2:.4f})")
+
 poly = PolynomialFeatures(degree=5, include_bias=False)
 X_train_poly = poly.fit_transform(X)
 X_test_poly = poly.transform(X_test)
@@ -47,16 +54,38 @@ model.fit(X_train_scaled, y)
 
 train_preds = model.predict(X_train_scaled)
 test_preds = model.predict(X_test_scaled)
+oof_preds = cross_val_predict(model, X_train_scaled, y, cv=kf)
 
-train_mse = mean_squared_error(y, train_preds)
-train_r2 = r2_score(y, train_preds)
+print(f"\nFinal Model (Degree 5 Lasso):")
+print(f"Best Alpha: {model.alpha_:.5f}")
+print(f"Selected Non-Zero Features: {np.sum(model.coef_ != 0)} / {X_train_poly.shape[1]}")
+print(f"Train MSE: {mean_squared_error(y, train_preds):.4f}")
+print(f"Train R2:  {r2_score(y, train_preds):.4f}")
+print(f"CV MSE:    {mean_squared_error(y, oof_preds):.4f}")
+print(f"CV R2:     {r2_score(y, oof_preds):.4f}")
 
-print(f"Best alpha: {model.alpha_:.5f}")
-print(f"Non-zero coefficients: {np.sum(model.coef_ != 0)} / {X_train_poly.shape[1]}")
-print(f"Train MSE: {train_mse:.4f}")
-print(f"Train R2: {train_r2:.4f}")
-
-# Save test predictions matching assignment template
 pred_df = pd.DataFrame({'y': test_preds})
 pred_df.to_csv('BT2024032/BT2024032_pred_var1.csv', index=False)
 print("Saved predictions to BT2024032/BT2024032_pred_var1.csv")
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
+ax1.plot(degrees, ridge_mses, 's-', label='Ridge MSE')
+ax1.plot(degrees[:len(lasso_mses)], lasso_mses, 'o-', label='Lasso MSE')
+ax1.axvline(5, color='r', linestyle='--', label='Selected (d=5)')
+ax1.set_xlabel('Degree')
+ax1.set_ylabel('CV MSE')
+ax1.set_title('var1: Error vs Degree')
+ax1.legend()
+ax1.grid(True)
+
+residuals = y - oof_preds
+ax2.scatter(oof_preds, y, alpha=0.4, s=18)
+ax2.plot([y.min(), y.max()], [y.min(), y.max()], 'r--')
+ax2.set_xlabel('Predicted y')
+ax2.set_ylabel('Actual y')
+ax2.set_title('var1: Parity Plot')
+ax2.grid(True)
+
+plt.tight_layout()
+plt.savefig('var1_plot.png', dpi=200)
+print("Saved plot to var1_plot.png")

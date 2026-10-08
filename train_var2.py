@@ -54,8 +54,7 @@ print(f"Best alpha: {model.alpha_:.4f}")
 print(f"Train MSE: {train_mse:.4f}")
 print(f"Train R2: {train_r2:.4f}")
 
-# Save test predictions
-pred_df = test_df.copy()
-pred_df['y'] = test_preds
+# Save test predictions matching assignment template
+pred_df = pd.DataFrame({'y': test_preds})
 pred_df.to_csv('BT2024032/BT2024032_pred_var2.csv', index=False)
 print("Saved predictions to BT2024032/BT2024032_pred_var2.csv")
